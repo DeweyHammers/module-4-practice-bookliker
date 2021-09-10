@@ -1,51 +1,80 @@
-import React from "react";
-import {
-  Container,
-  Header,
-  Menu,
-  Button,
-  List,
-  Image
-} from "semantic-ui-react";
+import React, { Component } from "react";
+import NavBar from "./components/NavBar";
+import BooksNav from "./components/BooksNav";
+import BookContainer from "./containers/BookContainer";
 
-function App() {
-  return (
-    <div>
-      <Menu inverted>
-        <Menu.Item header>Bookliker</Menu.Item>
-      </Menu>
-      <main>
-        <Menu vertical inverted>
-          <Menu.Item as={"a"} onClick={e => console.log("book clicked!")}>
-            Book title
-          </Menu.Item>
-        </Menu>
-        <Container text>
-          <Header>Book title</Header>
-          <Image
-            src="https://react.semantic-ui.com/images/wireframe/image.png"
-            size="small"
+class App extends Component {
+  state = {
+    books: [],
+    selectedBook: false,
+    curretUser: {
+      id: 11,
+      username: "Dewey",
+    },
+  };
+
+  componentDidMount() {
+    fetch("http://localhost:3000/books")
+      .then((resp) => resp.json())
+      .then((json) => this.setState({ books: json }));
+  }
+
+  handleSelectBook = (id) => {
+    this.setState({
+      selectedBook: this.state.books.filter((book) => book.id === id)[0],
+    });
+  };
+
+  handleLikeBook = (id) => {
+    const newState = this.state.books.map((book) => {
+      if (book.id === id) {
+        if (!book.users.some((user) => user.id === this.state.curretUser.id)) {
+          book.users = [...book.users, this.state.curretUser];
+          this.patchBook(book);
+        } else {
+          book.users = [
+            ...book.users.filter(
+              (user) => user.id !== this.state.curretUser.id
+            ),
+          ];
+          this.patchBook(book);
+        }
+        return book;
+      } else {
+        return book;
+      }
+    });
+    this.setState({ book: newState });
+  };
+
+  patchBook = (book) => {
+    fetch(`http://localhost:3000/books/${book.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ users: book.users }),
+    });
+  };
+
+  render() {
+    return (
+      <div>
+        <NavBar />
+        <main>
+          <BooksNav
+            selectBook={this.handleSelectBook}
+            books={this.state.books}
           />
-          <p>Book description</p>
-          <Button
-            color="red"
-            content="Like"
-            icon="heart"
-            label={{
-              basic: true,
-              color: "red",
-              pointing: "left",
-              content: "2,048"
-            }}
-          />
-          <Header>Liked by</Header>
-          <List>
-            <List.Item icon="user" content="User name" />
-          </List>
-        </Container>
-      </main>
-    </div>
-  );
+          {this.state.selectedBook && (
+            <BookContainer
+              likeBook={this.handleLikeBook}
+              book={this.state.selectedBook}
+              curretUser={this.state.curretUser}
+            />
+          )}
+        </main>
+      </div>
+    );
+  }
 }
 
 export default App;
